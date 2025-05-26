@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Finanzas del Hogar</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body {
+      font-family: sans-serif;
+      max-width: 900px;
+      margin: auto;
+      padding: 1rem;
+      background-color: #f2f2f2;
+      color: #333;
+    }
+    input, button, select {
+      margin: 0.3rem 0;
+      padding: 0.4rem;
+    }
+    .seccion {
+      margin-bottom: 2rem;
+      background: #fff;
+      padding: 1rem;
+      border-radius: 8px;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 1rem;
+    }
+    th, td {
+      border: 1px solid #ccc;
+      padding: 0.5rem;
+      text-align: left;
+    }
+    .btn-eliminar {
+      background-color: #f44336;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .filtros {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+      margin-bottom: 1rem;
+    }
+  </style>
+</head>
+<body>
+  <h1>Finanzas del Hogar</h1>
+
+  <div class="seccion">
+    <h2>Ingresos</h2>
+    <input type="text" id="ingresoDescripcion" placeholder="Descripción" />
+    <input type="number" id="ingresoValor" placeholder="Valor" />
+    <select id="ingresoCategoria">
+      <option value="Salario">Salario</option>
+      <option value="Ventas">Ventas</option>
+      <option value="Otro">Otro</option>
+    </select>
+    <button onclick="agregarRegistro('ingreso')">Agregar Ingreso</button>
+    <div class="filtros">
+      <select id="filtroIngresoCategoria" onchange="actualizarResumen()">
+        <option value="">Todas las Categorías</option>
+        <option value="Salario">Salario</option>
+        <option value="Ventas">Ventas</option>
+        <option value="Otro">Otro</option>
+      </select>
+    </div>
+    <table id="tablaIngresos">
+      <thead><tr><th>Descripción</th><th>Valor</th><th>Categoría</th><th>Acción</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <div class="seccion">
+    <h2>Gastos</h2>
+    <input type="text" id="gastoDescripcion" placeholder="Descripción" />
+    <input type="number" id="gastoValor" placeholder="Valor" />
+    <select id="gastoCategoria">
+      <option value="Alimentación">Alimentación</option>
+      <option value="Transporte">Transporte</option>
+      <option value="Servicios">Servicios</option>
+      <option value="Otro">Otro</option>
+    </select>
+    <button onclick="agregarRegistro('gasto')">Agregar Gasto</button>
+    <div class="filtros">
+      <select id="filtroGastoCategoria" onchange="actualizarResumen()">
+        <option value="">Todas las Categorías</option>
+        <option value="Alimentación">Alimentación</option>
+        <option value="Transporte">Transporte</option>
+        <option value="Servicios">Servicios</option>
+        <option value="Otro">Otro</option>
+      </select>
+    </div>
+    <table id="tablaGastos">
+      <thead><tr><th>Descripción</th><th>Valor</th><th>Categoría</th><th>Acción</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <div class="seccion">
+    <h2>Meta de Ahorro Mensual</h2>
+    <input type="number" id="metaAhorroMensual" placeholder="Meta mensual" />
+    <button onclick="establecerMeta()">Establecer Meta</button>
+  </div>
+
+  <div class="seccion">
+    <h2>Resumen</h2>
+    <div id="resumen"></div>
+    <canvas id="graficoFinanzas"></canvas>
+  </div>
+
+  <script>
+    let ingresos = JSON.parse(localStorage.getItem("ingresos")) || [];
+    let gastos = JSON.parse(localStorage.getItem("gastos")) || [];
+    let metaAhorroMensual = parseFloat(localStorage.getItem("metaAhorroMensual")) || 0;
+
+    function agregarRegistro(tipo) {
+      const descripcion = document.getElementById(`${tipo}Descripcion`).value;
+      const valor = parseFloat(document.getElementById(`${tipo}Valor`).value);
+      const categoria = document.getElementById(`${tipo}Categoria`).value;
+      if (!descripcion || isNaN(valor) || valor <= 0) return;
+
+      const registro = { descripcion, valor, categoria };
+      if (tipo === 'ingreso') ingresos.push(registro);
+      else gastos.push(registro);
+
+      localStorage.setItem("ingresos", JSON.stringify(ingresos));
+      localStorage.setItem("gastos", JSON.stringify(gastos));
+
+      document.getElementById(`${tipo}Descripcion`).value = '';
+      document.getElementById(`${tipo}Valor`).value = '';
+
+      actualizarResumen();
+    }
+
+    function eliminarRegistro(tipo, index) {
+      if (tipo === 'ingreso') ingresos.splice(index, 1);
+      else gastos.splice(index, 1);
+
+      localStorage.setItem("ingresos", JSON.stringify(ingresos));
+      localStorage.setItem("gastos", JSON.stringify(gastos));
+
+      actualizarResumen();
+    }
+
+    function establecerMeta() {
+      const meta = parseFloat(document.getElementById("metaAhorroMensual").value);
+      metaAhorroMensual = isNaN(meta) || meta < 0 ? 0 : meta;
+      localStorage.setItem("metaAhorroMensual", metaAhorroMensual);
+      actualizarResumen();
+    }
+
+    function calcularResumen() {
+      const filtroIngreso = document.getElementById("filtroIngresoCategoria").value;
+      const filtroGasto = document.getElementById("filtroGastoCategoria").value;
+
+      const ingresosFiltrados = filtroIngreso ? ingresos.filter(i => i.categoria === filtroIngreso) : ingresos;
+      const gastosFiltrados = filtroGasto ? gastos.filter(g => g.categoria === filtroGasto) : gastos;
+
+      const totalIngresos = ingresosFiltrados.reduce((acc, cur) => acc + cur.valor, 0);
+      const totalGastos = gastosFiltrados.reduce((acc, cur) => acc + cur.valor, 0);
+      const diezmo = totalIngresos * 0.10;
+      const ahorroDiario = metaAhorroMensual / 30;
+      const disponible = totalIngresos - totalGastos - diezmo - metaAhorroMensual;
+      const cumplimiento = totalIngresos - totalGastos - diezmo;
+      const cumpleMeta = cumplimiento >= metaAhorroMensual ? "Sí" : "No";
+
+      return {
+        totalIngresos,
+        totalGastos,
+        diezmo,
+        ahorroDiario,
+        disponible,
+        cumpleMeta,
+        ingresosFiltrados,
+        gastosFiltrados
+      };
+    }
+
+    function actualizarResumen() {
+      const resumen = calcularResumen();
+
+      document.querySelector("#tablaIngresos tbody").innerHTML = resumen.ingresosFiltrados.map((i, idx) => `
+        <tr><td>${i.descripcion}</td><td>$${i.valor.toFixed(2)}</td><td>${i.categoria}</td><td><button class="btn-eliminar" onclick="eliminarRegistro('ingreso', ${idx})">Eliminar</button></td></tr>
+      `).join('');
+
+      document.querySelector("#tablaGastos tbody").innerHTML = resumen.gastosFiltrados.map((g, idx) => `
+        <tr><td>${g.descripcion}</td><td>$${g.valor.toFixed(2)}</td><td>${g.categoria}</td><td><button class="btn-eliminar" onclick="eliminarRegistro('gasto', ${idx})">Eliminar</button></td></tr>
+      `).join('');
+
+      document.getElementById("resumen").innerHTML = `
+        <p>Total Ingresos: $${resumen.totalIngresos.toFixed(2)}</p>
+        <p>Total Gastos: $${resumen.totalGastos.toFixed(2)}</p>
+        <p>Diezmo (10%): $${resumen.diezmo.toFixed(2)}</p>
+        <p>Ahorro diario para meta mensual: $${resumen.ahorroDiario.toFixed(2)}</p>
+        <p>Dinero disponible después del diezmo y ahorro: $${resumen.disponible.toFixed(2)}</p>
+        <p>¿Se cumple la meta mensual de ahorro?: <strong>${resumen.cumpleMeta}</strong></p>
+      `;
+
+      actualizarGrafico(resumen);
+    }
+
+    let grafico;
+    function actualizarGrafico(data) {
+      const ctx = document.getElementById("graficoFinanzas").getContext("2d");
+      if (grafico) grafico.destroy();
+      grafico = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: ['Ingresos', 'Gastos', 'Diezmo', 'Meta Ahorro', 'Disponible'],
+          datasets: [{
+            label: 'Resumen Financiero',
+            data: [data.totalIngresos, data.totalGastos, data.diezmo, metaAhorroMensual, data.disponible],
+            backgroundColor: ['#4caf50', '#f44336', '#ff9800', '#2196f3', '#9c27b0']
+          }]
+        },
+        options: {
+          responsive: true,
+          scales: {
+            y: {
+              beginAtZero: true
+            }
+          }
+        }
+      });
+    }
+
+    window.onload = actualizarResumen;
+  </script>
+</body>
+</html>
+
+
+
