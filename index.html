@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Finanzas del Hogar</title>
+  <script>
+    let ingresos = [];
+    let gastos = [];
+    let metaAhorroMensual = 0;
+
+    function agregarRegistro(tipo) {
+      const descripcion = document.getElementById(`${tipo}Descripcion`).value;
+      const valor = parseFloat(document.getElementById(`${tipo}Valor`).value);
+      if (!descripcion || isNaN(valor) || valor <= 0) return;
+
+      const registro = { descripcion, valor };
+      if (tipo === 'ingreso') ingresos.push(registro);
+      else gastos.push(registro);
+
+      document.getElementById(`${tipo}Descripcion`).value = '';
+      document.getElementById(`${tipo}Valor`).value = '';
+
+      actualizarResumen();
+    }
+
+    function establecerMeta() {
+      const meta = parseFloat(document.getElementById("metaAhorroMensual").value);
+      metaAhorroMensual = isNaN(meta) || meta < 0 ? 0 : meta;
+      actualizarResumen();
+    }
+
+    function calcularResumen() {
+      const totalIngresos = ingresos.reduce((acc, cur) => acc + cur.valor, 0);
+      const totalGastos = gastos.reduce((acc, cur) => acc + cur.valor, 0);
+      const diezmo = totalIngresos * 0.10;
+      const ahorroDiario = metaAhorroMensual / 30;
+      const disponible = totalIngresos - totalGastos - diezmo - metaAhorroMensual;
+
+      return {
+        totalIngresos,
+        totalGastos,
+        diezmo,
+        ahorroDiario,
+        disponible,
+      };
+    }
+
+    function actualizarResumen() {
+      const resumen = calcularResumen();
+      document.getElementById("resumen").innerHTML = `
+        <p>Total Ingresos: $${resumen.totalIngresos.toFixed(2)}</p>
+        <p>Total Gastos: $${resumen.totalGastos.toFixed(2)}</p>
+        <p>Diezmo (10%): $${resumen.diezmo.toFixed(2)}</p>
+        <p>Ahorro diario para meta mensual: $${resumen.ahorroDiario.toFixed(2)}</p>
+        <p>Dinero disponible después del diezmo y ahorro: $${resumen.disponible.toFixed(2)}</p>
+      `;
+    }
+  </script>
+  <style>
+    body {
+      font-family: sans-serif;
+      max-width: 700px;
+      margin: auto;
+      padding: 1rem;
+    }
+    input, button {
+      margin: 0.3rem 0;
+      padding: 0.4rem;
+    }
+    .seccion {
+      margin-bottom: 2rem;
+    }
+  </style>
+</head>
+<body>
+  <h1>Finanzas del Hogar</h1>
+
+  <div class="seccion">
+    <h2>Ingresos</h2>
+    <input type="text" id="ingresoDescripcion" placeholder="Descripción" />
+    <input type="number" id="ingresoValor" placeholder="Valor" />
+    <button onclick="agregarRegistro('ingreso')">Agregar Ingreso</button>
+  </div>
+
+  <div class="seccion">
+    <h2>Gastos</h2>
+    <input type="text" id="gastoDescripcion" placeholder="Descripción" />
+    <input type="number" id="gastoValor" placeholder="Valor" />
+    <button onclick="agregarRegistro('gasto')">Agregar Gasto</button>
+  </div>
+
+  <div class="seccion">
+    <h2>Meta de Ahorro Mensual</h2>
+    <input type="number" id="metaAhorroMensual" placeholder="Meta mensual" />
+    <button onclick="establecerMeta()">Establecer Meta</button>
+  </div>
+
+  <div class="seccion">
+    <h2>Resumen</h2>
+    <div id="resumen"></div>
+  </div>
+</body>
+</html>
